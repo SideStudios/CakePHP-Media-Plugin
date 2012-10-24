@@ -245,9 +245,9 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 
 		$x = $y = 0;
 		if($new_height > $this->height())
-			$x = floor(($width - $new_width) / 2);
+			$x = ceil(($width - $new_width) / 2);
 		else
-			$y = floor(($height - $new_height) / 2);
+			$y = ceil(($height - $new_height) / 2);
 
 		$image = imageCreateTrueColor($width, $height);
 		imageFill($image, 0, 0, imageColorAllocate($image, 255, 255, 255));

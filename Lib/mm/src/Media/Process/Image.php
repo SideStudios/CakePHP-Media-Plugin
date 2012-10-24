@@ -60,11 +60,11 @@ class Media_Process_Image extends Media_Process_Generic {
 	 */
 	public function fitInsideWhite($width, $height) {
 		$new_width = $width;
-		$new_height = floor($new_width * ($this->_adapter->height() / $this->_adapter->width()));
+		$new_height = round($new_width * ($this->_adapter->height() / $this->_adapter->width()));
 		
 		if($new_height > $this->_adapter->height()){
 			$new_height = $height;
-			$new_width = floor($new_height * ($this->_adapter->width() / $this->_adapter->height()));
+			$new_width = round($new_height * ($this->_adapter->width() / $this->_adapter->height()));
 		}
 
 		return $this->_adapter->fitInsideWhite($width, $height, $new_width, $new_height);
