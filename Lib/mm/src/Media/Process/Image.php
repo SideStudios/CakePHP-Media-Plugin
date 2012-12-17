@@ -62,7 +62,7 @@ class Media_Process_Image extends Media_Process_Generic {
 		$new_width = $width;
 		$new_height = round($new_width * ($this->_adapter->height() / $this->_adapter->width()));
 		
-		if($new_height > $this->_adapter->height()){
+		if($new_height > $height){
 			$new_height = $height;
 			$new_width = round($new_height * ($this->_adapter->width() / $this->_adapter->height()));
 		}
