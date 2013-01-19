@@ -104,7 +104,7 @@ if (!defined('MEDIA_FILTER')) {
 	define('MEDIA_FILTER', MEDIA . 'filter' . DS);
 }
 if (!defined('MEDIA_TRANSFER')) {
-	define('MEDIA_TRANSFER', APP. 'Media' . DS . 'transfer' . DS);
+	define('MEDIA_TRANSFER', MEDIA . 'transfer' . DS);
 }
 
 /**
