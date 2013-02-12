@@ -59,6 +59,10 @@ class Media_Process_Image extends Media_Process_Generic {
 	 * @return boolean
 	 */
 	public function fitInsideWhite($width, $height) {
+		return $this->fitInsideExact($width, $height, '#FFFFFF');
+	}
+
+	public function fitInsideExact($width, $height, $color = 'transparent') {
 		$new_width = $width;
 		$new_height = round($new_width * ($this->_adapter->height() / $this->_adapter->width()));
 		
@@ -67,7 +71,7 @@ class Media_Process_Image extends Media_Process_Generic {
 			$new_width = round($new_height * ($this->_adapter->width() / $this->_adapter->height()));
 		}
 
-		return $this->_adapter->fitInsideWhite($width, $height, $new_width, $new_height);
+		return $this->_adapter->fitInsideExact($width, $height, $new_width, $new_height, $color);
 	}
 
 	/**
