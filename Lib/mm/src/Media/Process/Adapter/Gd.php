@@ -237,7 +237,7 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 		return false;
 	}
 
-	public function fitInsideWhite($width, $height, $new_width, $new_height){
+	public function fitInsideExact($width, $height, $new_width, $new_height, $color){
 		$width  = (integer) $width;
 		$height = (integer) $height;
 		$new_width = (integer) $new_width;
@@ -250,16 +250,27 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 			$y = ceil(($height - $new_height) / 2);
 
 		$image = imageCreateTrueColor($width, $height);
-		imageFill($image, 0, 0, imageColorAllocate($image, 255, 255, 255));
+		$this->_adjustTransparency($this->_object, $image, $color);
 
-		imageCopyResampled(
-			$image, 
-			$this->_object, 
-			$x, $y,
-			0, 0,
-			$new_width, $new_height,
-			$this->width(), $this->height()
-		);
+		if ($this->_isTransparent($this->_object)) {
+			imageCopyResized(
+				$image,
+				$this->_object,
+				$x, $y,
+				0, 0,
+				$new_width, $new_height,
+				$this->width(), $this->height()
+			);
+		} else {
+			imageCopyResampled(
+				$image, 
+				$this->_object, 
+				$x, $y,
+				0, 0,
+				$new_width, $new_height,
+				$this->width(), $this->height()
+			);
+		}
 
 		if ($this->_isResource($image)) {
 			$this->_object = $image;
@@ -321,7 +332,7 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 		return imageColorTransparent($image) >= 0;
 	}
 
-	protected function _adjustTransparency(&$source, &$target) {
+	protected function _adjustTransparency(&$source, &$target, $color) {
 		if ($this->_isTransparent($source)) {
 			$rgba  = imageColorsForIndex($source, imageColorTransparent($source));
 			$color = imageColorAllocate($target, $rgba['red'], $rgba['green'], $rgba['blue']);
@@ -332,10 +343,28 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 				imageAlphaBlending($target, false);
 				imageSaveAlpha($target, true);
 			} elseif ($this->_format != 'gif') {
-				$white = imageColorAllocate($target, 255, 255, 255);
-				imageFill($target, 0, 0 , $white);
+				$color = $color == 'transparent' ? hex2rgb('#FFFFFF') : hex2rgb($color);
+				$new_color = imageColorAllocate($target, $color[0], $color[1], $color[2]);
+				imageFill($target, 0, 0 , $new_color);
 			}
 		}
+	}
+
+	function hex2rgb($hex) {
+		$hex = str_replace("#", "", $hex);
+
+		if(strlen($hex) == 3) {
+			$r = hexdec(substr($hex,0,1).substr($hex,0,1));
+			$g = hexdec(substr($hex,1,1).substr($hex,1,1));
+			$b = hexdec(substr($hex,2,1).substr($hex,2,1));
+		} else {
+			$r = hexdec(substr($hex,0,2));
+			$g = hexdec(substr($hex,2,2));
+			$b = hexdec(substr($hex,4,2));
+		}
+		$rgb = array($r, $g, $b);
+		//return implode(",", $rgb); // returns the rgb values separated by commas
+		return $rgb; // returns an array with the rgb values
 	}
 
 	protected function _rgb2array($rgb) {
