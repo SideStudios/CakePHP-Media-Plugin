@@ -102,11 +102,14 @@ class MediaValidation extends Validation {
 		if ($max !== false && $max = self::_toComputableSize($max)) {
 			 $maxSizes[] = $max;
 		}
-		if ($max = self::_toComputableSize(ini_get('post_max_size'))) {
-			$maxSizes[] = $max;
-		}
-		if ($max = self::_toComputableSize(ini_get('upload_max_filesize'))) {
-			$maxSizes[] = $max;
+		// Only compare ini values post_max_size and upload_max_filesize if we are not on the command line
+		if(php_sapi_name() !== 'cli') {
+			if ($max = self::_toComputableSize(ini_get('post_max_size'))) {
+				$maxSizes[] = $max;
+			}
+			if ($max = self::_toComputableSize(ini_get('upload_max_filesize'))) {
+				$maxSizes[] = $max;
+			}
 		}
 		if (empty($maxSizes)) {
 			return false;
