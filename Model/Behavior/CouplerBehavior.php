@@ -177,6 +177,8 @@ class CouplerBehavior extends ModelBehavior {
 		$file .= DS . $result[$Model->alias]['basename'];
 
 		$File = new File($file);
+		if(!$File->exists())
+			return true;
 		return $File->delete();
 	}
 
