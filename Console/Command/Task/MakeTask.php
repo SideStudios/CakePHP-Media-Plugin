@@ -56,10 +56,27 @@ class MakeTask extends MediaShell {
 		$message = 'Regex (matches against the basenames of the files) for source inclusion:';
 		$pattern = $this->in($message, null, '.*');
 
+		$image_versions = Configure::read('Media.filter.image');
+		$message = 'Image Versions? (All,' . implode(', ', array_keys($image_versions)) . ')';
+		$version = $this->in($message, null, 'All');
+
+		if ($version != 'All') {
+			Configure::write('Media.filter.image', array($version => $image_versions[$version]));
+		}
+
+		$message = 'Overwrite? (yes,no)';
+		$overwrite = $this->in($message, null, $settings['overwrite'] ? 'yes' : 'no');
+
+		if($overwrite != $settings['overwrite']) {
+			$settings['overwrite'] = $overwrite;
+			$this->_Model->Behaviors->Generator->settings[$this->_Model->alias]['overwrite'] = $overwrite;
+		}
+
 		$this->out();
 		$this->out(sprintf('%-25s: %s', 'Base', $this->shortPath($settings['baseDirectory'])));
 		$this->out(sprintf('%-25s: %s (%s)', 'Source', $this->shortPath($this->source), $pattern));
 		$this->out(sprintf('%-25s: %s', 'Destination', $this->shortPath($settings['filterDirectory'])));
+		$this->out(sprintf('%-25s: %s', 'Image Version(s)', $version));
 		$this->out(sprintf('%-25s: %s', 'Overwrite existing', $settings['overwrite'] ? 'yes' : 'no'));
 		$this->out(sprintf('%-25s: %s', 'Create directories', $settings['createDirectory'] ? 'yes' : 'no'));
 
