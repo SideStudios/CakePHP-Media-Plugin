@@ -17,6 +17,7 @@
  * @link       http://github.com/davidpersson/media
  */
 require_once 'Mime/Type.php';
+App::uses('Folder', 'Utility');
 
 /**
  * Media Helper Class
