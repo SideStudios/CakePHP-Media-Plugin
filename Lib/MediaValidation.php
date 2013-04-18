@@ -69,12 +69,13 @@ class MediaValidation extends Validation {
 		if (!is_string($check) || !preg_match('/^[\w0-9]+(\.[\w0-9]+)?$/', $check)) {
 			return false;
 		}
+		
 		list($deny, $allow) = self::_normalize($deny, $allow);
 
-		if ($deny === true || (is_array($deny) && Validation::extension($check, $deny))) {
+		if ($deny === true || (is_array($deny) && in_array(strtolower($check), $deny))) {
 			return false;
 		}
-		if ($allow !== true && (is_array($allow) && !Validation::extension($check, $allow))) {
+		if ($allow !== true && (is_array($allow) && !in_array(strtolower($check), $allow))) {
 			return false;
 		}
 		return true;
