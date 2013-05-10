@@ -66,11 +66,8 @@ class MakeTask extends MediaShell {
 
 		$message = 'Overwrite? (yes,no)';
 		$overwrite = $this->in($message, null, $settings['overwrite'] ? 'yes' : 'no');
-
-		if($overwrite != $settings['overwrite']) {
-			$settings['overwrite'] = $overwrite;
-			$this->_Model->Behaviors->Generator->settings[$this->_Model->alias]['overwrite'] = $overwrite;
-		}
+		$settings['overwrite'] = $overwrite == 'yes' ? true : false;
+		$this->_Model->Behaviors->Generator->settings[$this->_Model->alias]['overwrite'] = $settings['overwrite'];
 
 		$this->out();
 		$this->out(sprintf('%-25s: %s', 'Base', $this->shortPath($settings['baseDirectory'])));
