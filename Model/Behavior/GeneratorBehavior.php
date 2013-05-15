@@ -115,8 +115,9 @@ class GeneratorBehavior extends ModelBehavior {
  * @return boolean
  */
 	public function afterSave(Model $Model, $created) {
-		$item = $Model->data[$Model->alias];
-
+		$item = $Model->findById($Model->data[$Model->alias]['id']);
+		$item = $item[$Model->alias];
+		
 		if (isset($item['dirname'], $item['basename'])) {
 			$file = $item['dirname'] . DS . $item['basename'];
 		} elseif (isset($item['file'])) {
@@ -152,12 +153,21 @@ class GeneratorBehavior extends ModelBehavior {
  */
 	public function make($Model, $file) {
 		extract($this->settings[$Model->alias]);
-
+		
 		list($file, $relativeFile) = $this->_file($Model, $file);
 		$relativeDirectory = DS . rtrim(dirname($relativeFile), '.');
 
 		$filter = Configure::read('Media.filter.' . Mime_Type::guessName($file));;
 		$result = true;
+
+		// Find additional filters per model
+		if (!empty($Model->data[$Model->alias]['model'])) {
+			$modelName = $Model->data[$Model->alias]['model'];
+			App::import('Model', $modelName);
+			$assocModel = new $modelName();
+			if (!empty($assocModel->hasMany[$Model->alias]['filters'])) $filter = array_merge($filter, $assocModel->hasMany[$Model->alias]['filters']);
+			$this->log(var_export($filter, true));
+		}
 
 		foreach ($filter as $version => $instructions) {
 			$directory = Folder::slashTerm($filterDirectory . $version . $relativeDirectory);
