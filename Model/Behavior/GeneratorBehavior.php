@@ -115,6 +115,8 @@ class GeneratorBehavior extends ModelBehavior {
  * @return boolean
  */
 	public function afterSave(Model $Model, $created) {
+
+		// Get all (not just submitted) info for this Model
 		$item = $Model->findById($Model->data[$Model->alias]['id']);
 		$item = $item[$Model->alias];
 		
@@ -160,13 +162,12 @@ class GeneratorBehavior extends ModelBehavior {
 		$filter = Configure::read('Media.filter.' . Mime_Type::guessName($file));;
 		$result = true;
 
-		// Find additional filters per model
+		// Find and integrate additional filters per model
 		if (!empty($Model->data[$Model->alias]['model'])) {
 			$modelName = $Model->data[$Model->alias]['model'];
 			App::import('Model', $modelName);
 			$assocModel = new $modelName();
 			if (!empty($assocModel->hasMany[$Model->alias]['filters'])) $filter = array_merge($filter, $assocModel->hasMany[$Model->alias]['filters']);
-			$this->log(var_export($filter, true));
 		}
 
 		foreach ($filter as $version => $instructions) {
