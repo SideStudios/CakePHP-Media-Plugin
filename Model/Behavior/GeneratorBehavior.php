@@ -165,7 +165,14 @@ class GeneratorBehavior extends ModelBehavior {
 		// Find and integrate additional filters per model
 		if (!empty($Model->data[$Model->alias]['model'])) {
 			$modelName = $Model->data[$Model->alias]['model'];
-			App::import('Model', $modelName);
+			
+			// Load plugin models differently
+			if (strpos($modelName, '.') !== false) {
+				list($plugin, $modelName) = explode('.', $modelName);
+				App::uses($modelName, $plugin . '.Model');
+			}
+			else App::uses($modelName, 'Model');
+
 			$assocModel = new $modelName();
 			if (!empty($assocModel->hasMany[$Model->alias]['filters'])) $filter = array_merge($filter, $assocModel->hasMany[$Model->alias]['filters']);
 		}
@@ -272,6 +279,9 @@ class GeneratorBehavior extends ModelBehavior {
 			}
 			return $action == 'copy' ? chmod($destination, $mode) : true;
 		}
+
+		/* Skip hints that are not instructions */
+		unset($process['instructions']['extension']);
 
 		/* Process `Media_Process_*` instructions */
 		$Media = Media_Process::factory(array('source' => $file));
