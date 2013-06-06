@@ -175,6 +175,8 @@ class GeneratorBehavior extends ModelBehavior {
 
 			$assocModel = new $modelName();
 			if (!empty($assocModel->hasMany[$Model->alias]['filters'])) $filter = array_merge($filter, $assocModel->hasMany[$Model->alias]['filters']);
+			if ($extra_filters = $assocModel->images($Model->alias)) $filter = array_merge($filter, array_map(function($size) { return $size['operations']; }, $extra_filters));
+
 		}
 
 		foreach ($filter as $version => $instructions) {
