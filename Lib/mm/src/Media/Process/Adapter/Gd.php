@@ -332,7 +332,7 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 		return imageColorTransparent($image) >= 0;
 	}
 
-	protected function _adjustTransparency(&$source, &$target, $color) {
+	protected function _adjustTransparency(&$source, &$target, $color = 'transparent') {
 		if ($this->_isTransparent($source)) {
 			$rgba  = imageColorsForIndex($source, imageColorTransparent($source));
 			$color = imageColorAllocate($target, $rgba['red'], $rgba['green'], $rgba['blue']);
@@ -343,14 +343,14 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 				imageAlphaBlending($target, false);
 				imageSaveAlpha($target, true);
 			} elseif ($this->_format != 'gif') {
-				$color = $color == 'transparent' ? hex2rgb('#FFFFFF') : hex2rgb($color);
+				$color = $color == 'transparent' ? $this->hex2rgb('#FFFFFF') : $this->hex2rgb($color);
 				$new_color = imageColorAllocate($target, $color[0], $color[1], $color[2]);
 				imageFill($target, 0, 0 , $new_color);
 			}
 		}
 	}
 
-	function hex2rgb($hex) {
+	protected function hex2rgb($hex) {
 		$hex = str_replace("#", "", $hex);
 
 		if(strlen($hex) == 3) {
