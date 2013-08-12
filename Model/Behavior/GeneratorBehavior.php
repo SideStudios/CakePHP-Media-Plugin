@@ -170,6 +170,8 @@ class GeneratorBehavior extends ModelBehavior {
 			if (!empty($assocModel->hasMany[$Model->alias]['filters'])) $filter = array_merge($filter, $assocModel->hasMany[$Model->alias]['filters']);
 		}
 
+		if (!$filter) return false;
+
 		foreach ($filter as $version => $instructions) {
 			$directory = Folder::slashTerm($filterDirectory . $version . $relativeDirectory);
 
