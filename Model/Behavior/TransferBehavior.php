@@ -542,7 +542,7 @@ class TransferBehavior extends ModelBehavior {
 			);
 		} elseif (MediaValidation::file($resource)) {
 			return $this->transferMeta($Model, $resource);
-		} elseif (TransferValidation::url($resource, array('scheme' => 'http'))) {
+		} elseif (TransferValidation::url($resource, array('scheme' => array('http', 'https')))) {
 			return $this->transferMeta($Model, $resource);
 		}
 		return false;
