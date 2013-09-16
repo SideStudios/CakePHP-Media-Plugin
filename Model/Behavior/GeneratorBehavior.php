@@ -201,12 +201,6 @@ class GeneratorBehavior extends ModelBehavior {
 				trigger_error($message, E_USER_WARNING);
 				$result = false;
 			}
-			if (!$result) {
-				$message  = "GeneratorBehavior::make - The method responsible for making version ";
-				$message .= "`{$version}` of file `{$file}` returned `false`. Skipping version.";
-				trigger_error($message, E_USER_WARNING);
-				$result = false;
-			}
 		}
 		return $result;
 	}
@@ -285,6 +279,20 @@ class GeneratorBehavior extends ModelBehavior {
 		/* Skip hints that are not instructions */
 		unset($process['instructions']['extension']);
 
+		/* Determine destination file */
+		$extension = null;
+
+		if ($guessExtension) {
+			if (isset($process['instructions']['convert'])) {
+				$extension = Mime_Type::guessExtension($process['instructions']['convert']);
+			} else {
+				$extension = Mime_Type::guessExtension($file);
+			}
+		}
+		$destination = $this->_destinationFile($file, $process['directory'], $extension, $overwrite);
+
+		if (!$destination) return false;
+
 		/* Process `Media_Process_*` instructions */
 		$Media = Media_Process::factory(array('source' => $file));
 		foreach ($process['instructions'] as $method => $args) {
@@ -304,21 +312,6 @@ class GeneratorBehavior extends ModelBehavior {
 			}
 		}
 
-		/* Determine destination file */
-		$extension = null;
-
-		if ($guessExtension) {
-			if (isset($process['instructions']['convert'])) {
-				$extension = Mime_Type::guessExtension($process['instructions']['convert']);
-			} else {
-				$extension = Mime_Type::guessExtension($file);
-			}
-		}
-		$destination = $this->_destinationFile($file, $process['directory'], $extension, $overwrite);
-
-		if (!$destination) {
-			return false;
-		}
 		return $Media->store($destination) && chmod($destination, $mode);
 	}
 
