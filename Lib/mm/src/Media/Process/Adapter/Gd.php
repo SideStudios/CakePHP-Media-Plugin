@@ -334,7 +334,7 @@ class Media_Process_Adapter_Gd extends Media_Process_Adapter {
 
 	protected function _adjustTransparency(&$source, &$target, $color = 'transparent') {
 		if ($this->_isTransparent($source)) {
-			$rgba  = imageColorsForIndex($source, imageColorTransparent($source));
+			$rgba  = @imageColorsForIndex($source, imageColorTransparent($source));
 			$color = imageColorAllocate($target, $rgba['red'], $rgba['green'], $rgba['blue']);
 			imageColorTransparent($target, $color);
 			imageFill($target, 0, 0, $color);
