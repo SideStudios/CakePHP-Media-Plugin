@@ -103,7 +103,7 @@ class MetaBehavior extends ModelBehavior {
  * @param Model $Model
  * @return boolean
  */
-	public function beforeSave(Model $Model) {
+	public function beforeSave(Model $Model, $options = Array()) {
 		if ($Model->exists() || !isset($Model->data[$Model->alias]['file'])) {
 			return true;
 		}

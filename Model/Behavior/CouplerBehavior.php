@@ -97,7 +97,7 @@ class CouplerBehavior extends ModelBehavior {
  * @param Model $Model
  * @return boolean
  */
-	public function beforeSave(Model $Model) {
+	public function beforeSave(Model $Model, $options = Array()) {
 		if (!$Model->exists()) {
 			if (!isset($Model->data[$Model->alias]['file'])) {
 				//unset($Model->data[$Model->alias]);

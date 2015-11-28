@@ -114,12 +114,12 @@ class GeneratorBehavior extends ModelBehavior {
  * @param boolean $created
  * @return boolean
  */
-	public function afterSave(Model $Model, $created) {
+	public function afterSave(Model $Model, $created, $options = Array()) {
 
 		// Get all (not just submitted) info for this Model
 		$item = $Model->findById($Model->data[$Model->alias]['id']);
 		$item = $item[$Model->alias];
-		
+
 		if (isset($item['dirname'], $item['basename'])) {
 			$file = $item['dirname'] . DS . $item['basename'];
 		} elseif (isset($item['file'])) {
@@ -155,7 +155,7 @@ class GeneratorBehavior extends ModelBehavior {
  */
 	public function make($Model, $file) {
 		extract($this->settings[$Model->alias]);
-		
+
 		list($file, $relativeFile) = $this->_file($Model, $file);
 		$relativeDirectory = DS . rtrim(dirname($relativeFile), '.');
 
@@ -165,7 +165,7 @@ class GeneratorBehavior extends ModelBehavior {
 		// Find and integrate additional filters per model
 		if (!empty($Model->data[$Model->alias]['model'])) {
 			$modelName = $Model->data[$Model->alias]['model'];
-			
+
 			// Load plugin models differently
 			if (strpos($modelName, '.') !== false) {
 				list($plugin, $modelName) = explode('.', $modelName);
