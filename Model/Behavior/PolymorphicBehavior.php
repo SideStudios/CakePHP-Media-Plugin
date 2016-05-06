@@ -1,6 +1,5 @@
 <?php
 /* SVN FILE: $Id: polymorphic.php 1375 2009-08-03 09:05:08Z AD7six $ */
-
 /**
  * Polymorphic Behavior.
  *
@@ -24,7 +23,6 @@
  * @lastmodified  $Date: 2009-08-03 09:05:08 +0000 (Mon, 03 Aug 2009) $
  * @license       http://www.opensource.org/licenses/mit-license.php The MIT License
  */
-
 /**
  * PolymorphicBehavior class
  *
@@ -33,41 +31,31 @@
  * @subpackage    base.models.behaviors
  */
 class PolymorphicBehavior extends ModelBehavior {
-
 /**
  * defaultSettings property
  *
  * @var array
- * @access protected
  */
 	protected $_defaultSettings = array(
 		'modelField' => 'model',
 		'foreignKey' => 'foreign_key'
 	);
-
 /**
  * setup method
  *
  * @param mixed $Model
  * @param array $config
  * @return void
- * @access public
  */
-	public function setup(Model $Model, $settings = array()) {
-		if (!isset($this->settings[$Model->alias])) {
-			$this->settings[$Model->alias] = $this->_defaultSettings;
-		}
-
-		$this->settings[$Model->alias] = array_merge($this->settings[$Model->alias], (array) $settings);
+	public function setup(Model $Model, $config = array()) {
+		$this->settings[$Model->alias] = am ($this->_defaultSettings, $config);
 	}
-
 /**
  * afterFind method
  *
  * @param mixed $Model
  * @param mixed $results
  * @param bool $primary
- * @access public
  * @return void
  */
 	public function afterFind(Model $Model, $results, $primary = false) {
@@ -75,7 +63,7 @@ class PolymorphicBehavior extends ModelBehavior {
 		if (App::import('Vendor', 'MiCache')) {
 			$models = MiCache::mi('models');
 		} else {
-			$models = App::objects('Model');
+			$models = Configure::listObjects('model');
 		}
 		if ($primary && isset($results[0][$Model->alias][$modelField]) && isset($results[0][$Model->alias][$foreignKey]) && $Model->recursive > 0) {
 			foreach ($results as $key => $result) {
@@ -124,7 +112,6 @@ class PolymorphicBehavior extends ModelBehavior {
 		}
 		return $results;
 	}
-
 /**
  * display method
  *
@@ -132,9 +119,8 @@ class PolymorphicBehavior extends ModelBehavior {
  *
  * @param mixed $id
  * @return string
- * @access public
  */
-	public function display($Model, $id = null) {
+	public function display(Model $Model, $id = null) {
 		if (!$id) {
 			if (!$Model->id) {
 				return false;
@@ -144,4 +130,3 @@ class PolymorphicBehavior extends ModelBehavior {
 		return current($Model->find('list', array('conditions' => array($Model->alias . '.' . $Model->primaryKey => $id))));
 	}
 }
-?>

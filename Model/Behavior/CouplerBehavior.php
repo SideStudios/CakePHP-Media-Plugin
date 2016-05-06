@@ -2,7 +2,7 @@
 /**
  * Coupler Behavior File
  *
- * Copyright (c) 2007-2012 David Persson
+ * Copyright (c) 2007-2013 David Persson
  *
  * Distributed under the terms of the MIT License.
  * Redistributions of files must retain the above copyright notice.
@@ -12,11 +12,11 @@
  *
  * @package    media
  * @subpackage media.models.behaviors
- * @copyright  2007-2012 David Persson <davidpersson@gmx.de>
+ * @copyright  2007-2013 David Persson <nperson@gmx.de>
  * @license    http://www.opensource.org/licenses/mit-license.php The MIT License
  * @link       http://github.com/davidpersson/media
  */
-
+App::import('Core', 'File');
 /**
  * Coupler Behavior Class
  *
@@ -49,10 +49,13 @@
  * @package    media
  * @subpackage media.models.behaviors
  */
- App::uses('File', 'Utility');
-
 class CouplerBehavior extends ModelBehavior {
-
+/**
+ * Settings keyed by model alias
+ *
+ * @var array
+ */
+	public $settings = array();
 /**
  * Default settings
  *
@@ -64,7 +67,6 @@ class CouplerBehavior extends ModelBehavior {
 	protected $_defaultSettings = array(
 		'baseDirectory' => MEDIA_TRANSFER
 	);
-
 /**
  * Setup
  *
@@ -73,13 +75,8 @@ class CouplerBehavior extends ModelBehavior {
  * @return void
  */
 	public function setup(Model $Model, $settings = array()) {
-		if (!isset($this->settings[$Model->alias])) {
-			$this->settings[$Model->alias] = $this->_defaultSettings;
-		}
-
-		$this->settings[$Model->alias] = array_merge($this->settings[$Model->alias], (array) $settings);
+		$this->settings[$Model->alias] = (array) $settings + $this->_defaultSettings;
 	}
-
 /**
  * Callback
  *
@@ -97,10 +94,10 @@ class CouplerBehavior extends ModelBehavior {
  * @param Model $Model
  * @return boolean
  */
-	public function beforeSave(Model $Model, $options = Array()) {
+	public function beforeSave(Model $Model, $options = array()) {
 		if (!$Model->exists()) {
 			if (!isset($Model->data[$Model->alias]['file'])) {
-				//unset($Model->data[$Model->alias]);
+				unset($Model->data[$Model->alias]);
 				return true;
 			}
 		} else {
@@ -111,7 +108,6 @@ class CouplerBehavior extends ModelBehavior {
 				return true;
 			}
 		}
-
 		$blacklist = array(
 			'dirname', 'basename', 'checksum', 'delete'
 		);
@@ -119,7 +115,6 @@ class CouplerBehavior extends ModelBehavior {
 			'id', 'file', 'model', 'foreign_key',
 			'created', 'modified', 'alternative'
 		);
-
 		foreach ($Model->data[$Model->alias] as $key => $value) {
 			if (in_array($key, $whitelist)) {
 				continue;
@@ -128,29 +123,23 @@ class CouplerBehavior extends ModelBehavior {
 				unset($Model->data[$Model->alias][$key]);
 			}
 		}
-
 		extract($this->settings[$Model->alias]);
-
 		if (isset($Model->data[$Model->alias]['file'])) {
 			$File = new File($Model->data[$Model->alias]['file']);
-
 			/* `baseDirectory` may equal the file's directory or use backslashes */
 			$dirname = substr(str_replace(
 				str_replace('\\', '/', $baseDirectory),
 				null,
 				str_replace('\\', '/', Folder::slashTerm($File->Folder->pwd()))
 			), 0, -1);
-
 			$result = array(
 				'dirname'  => $dirname,
 				'basename' => $File->name,
 			);
-
 			$Model->data[$Model->alias] = array_merge($Model->data[$Model->alias], $result);
 		}
 		return true;
 	}
-
 /**
  * Callback, deletes file (if there's one coupled) corresponding to record. If
  * the file couldn't be deleted the callback will stop the delete operation and
@@ -162,7 +151,6 @@ class CouplerBehavior extends ModelBehavior {
  */
 	public function beforeDelete(Model $Model, $cascade = true) {
 		extract($this->settings[$Model->alias]);
-
 		$result = $Model->find('first', array(
 			'conditions' => array($Model->primaryKey => $Model->id),
 			'fields'     => array('dirname', 'basename'),
@@ -171,17 +159,14 @@ class CouplerBehavior extends ModelBehavior {
 		if (!$result[$Model->alias]['dirname'] || !$result[$Model->alias]['basename']) {
 			return true;
 		}
-
-		$file  = $baseDirectory;
-		$file .= $result[$Model->alias]['dirname'];
-		$file .= DS . $result[$Model->alias]['basename'];
-
+		$file = $baseDirectory;
+		if ($result[$Model->alias]['dirname']) {
+			$file .= $result[$Model->alias]['dirname'] . DS;
+		}
+		$file .= $result[$Model->alias]['basename'];
 		$File = new File($file);
-		if(!$File->exists())
-			return true;
 		return $File->delete();
 	}
-
 /**
  * Callback, adds the `file` field to each result.
  *
@@ -195,21 +180,20 @@ class CouplerBehavior extends ModelBehavior {
 			return $results;
 		}
 		extract($this->settings[$Model->alias]);
-
 		foreach ($results as $key => &$result) {
 			if (!isset($result[$Model->alias]['dirname'], $result[$Model->alias]['basename'])) {
 				continue;
 			}
-			$file  = $baseDirectory;
-			$file .= $result[$Model->alias]['dirname'];
-			$file .= DS . $result[$Model->alias]['basename'];
+			$file = $baseDirectory;
+			if ($result[$Model->alias]['dirname']) {
+				$file .= $result[$Model->alias]['dirname'] . DS;
+			}
+			$file .= $result[$Model->alias]['basename'];
 			$file = str_replace(array('\\', '/'), DS, $file);
-
 			$result[$Model->alias]['file'] = $file;
 		}
 		return $results;
 	}
-
 /**
  * Checks if an alternative text is given only if a file is submitted
  *
@@ -217,7 +201,7 @@ class CouplerBehavior extends ModelBehavior {
  * @param array $field
  * @return boolean
  */
-	public function checkRepresent($Model, $field) {
+	public function checkRepresent(Model $Model, $field) {
 		if (!isset($Model->data[$Model->alias]['file'])) {
 			return true;
 		}
@@ -225,4 +209,3 @@ class CouplerBehavior extends ModelBehavior {
 		return !empty($value);
 	}
 }
-?>

@@ -2,7 +2,7 @@
 /**
  * Generator Behavior File
  *
- * Copyright (c) 2007-2012 David Persson
+ * Copyright (c) 2007-2013 David Persson
  *
  * Distributed under the terms of the MIT License.
  * Redistributions of files must retain the above copyright notice.
@@ -12,13 +12,12 @@
  *
  * @package    media
  * @subpackage media.models.behaviors
- * @copyright  2007-2012 David Persson <davidpersson@gmx.de>
+ * @copyright  2007-2013 David Persson <nperson@gmx.de>
  * @license    http://www.opensource.org/licenses/mit-license.php The MIT License
  * @link       http://github.com/davidpersson/media
  */
 require_once 'Media/Process.php';
 require_once 'Mime/Type.php';
-
 /**
  * Generator Behavior Class
  *
@@ -30,7 +29,7 @@ require_once 'Mime/Type.php';
  * To connect TransferBehavior and GeneratorBehavior with each other it is important
  * to specify TransferBehavior before GeneratorBehavior:
  * {{{
- *     var $actAs = array(
+ *     public $actAs = array(
  *         'Media.Transfer',
  *         'Media.Generator'
  *     );
@@ -44,7 +43,6 @@ require_once 'Mime/Type.php';
  * @subpackage media.models.behaviors
  */
 class GeneratorBehavior extends ModelBehavior {
-
 /**
  * Default settings
  *
@@ -73,6 +71,24 @@ class GeneratorBehavior extends ModelBehavior {
  *           type of the destination file.
  *   true - Try to guess extension by looking at the MIME type of the resulting file.
  *
+ * instructions
+ *   Holds instruction sets for generating versions. Allow you to control how and when
+ *   versions are generated. For more detailed information see the documentation of
+ *   `GeneratorBehavior::makeVersion`.
+ *
+ *   {{{
+ *   // ...
+ *   'instructions' => array(
+ *       'image' => array(
+ *            'fix0' => array('convert' => 'image/png', 'fit' => array(300, 400)),
+ *            'fix1' => array('convert' => 'image/png', 'fit' => array(500, 600))
+ *   // ...
+ *   }}}
+ *
+ *   If you want to compile your instruction sets dynamically you can do so by adding an
+ *   `instructions` method to your model. The Generator behavior will then call that method
+ *   in order get the value for this setting.
+ *
  * @var array
  */
 	protected $_defaultSettings = array(
@@ -81,12 +97,10 @@ class GeneratorBehavior extends ModelBehavior {
 		'createDirectory'     => true,
 		'createDirectoryMode' => 0755,
 		'mode'                => 0644,
-		'filter'              => null,
-		'mergeFilter'         => false,
 		'overwrite'           => false,
-		'guessExtension'      => true
+		'guessExtension'      => true,
+		'instructions'        => array()
 	);
-
 /**
  * Setup
  *
@@ -95,15 +109,12 @@ class GeneratorBehavior extends ModelBehavior {
  * @return void
  */
 	public function setup(Model $Model, $settings = array()) {
-		$this->_defaultSettings['filter'] = $Model->alias;
-
-		if (!isset($this->settings[$Model->alias])) {
-			$this->settings[$Model->alias] = $this->_defaultSettings;
+		$settings = (array)$settings;
+		$this->settings[$Model->alias] = array_merge($this->_defaultSettings, $settings);
+		if (method_exists($Model, 'instructions')) {
+			$this->settings[$Model->alias]['instructions'] = $Model->instructions();
 		}
-
-		$this->settings[$Model->alias] = array_merge($this->settings[$Model->alias], (array) $settings);
 	}
-
 /**
  * Callback
  *
@@ -114,12 +125,8 @@ class GeneratorBehavior extends ModelBehavior {
  * @param boolean $created
  * @return boolean
  */
-	public function afterSave(Model $Model, $created, $options = Array()) {
-
-		// Get all (not just submitted) info for this Model
-		$item = $Model->findById($Model->data[$Model->alias]['id']);
-		$item = $item[$Model->alias];
-
+	public function afterSave(Model $Model, $created, $options = array()) {
+		$item = $Model->data[$Model->alias];
 		if (isset($item['dirname'], $item['basename'])) {
 			$file = $item['dirname'] . DS . $item['basename'];
 		} elseif (isset($item['file'])) {
@@ -129,7 +136,6 @@ class GeneratorBehavior extends ModelBehavior {
 		}
 		return $this->make($Model, $file);
 	}
-
 /**
  * Parses instruction sets and invokes `makeVersion()` for each version on a file.
  * Also creates the destination directory if enabled by settings.
@@ -151,66 +157,46 @@ class GeneratorBehavior extends ModelBehavior {
  *
  * @param Model $Model
  * @param string $file Path to a file relative to `baseDirectory`  or an absolute path to a file
- * @return boolean
+ * @return array An array of absolute paths to version files which successfully have been made
  */
-	public function make($Model, $file) {
+	public function make(Model $Model, $file) {
 		extract($this->settings[$Model->alias]);
-
+		if (!$instructions) {
+			return array();
+		}
 		list($file, $relativeFile) = $this->_file($Model, $file);
 		$relativeDirectory = DS . rtrim(dirname($relativeFile), '.');
-
-		$filter = Configure::read('Media.filter.' . Mime_Type::guessName($file));;
-		$result = true;
-
-		// Find and integrate additional filters per model
-		if (!empty($Model->data[$Model->alias]['model'])) {
-			$modelName = $Model->data[$Model->alias]['model'];
-
-			// Load plugin models differently
-			if (strpos($modelName, '.') !== false) {
-				list($plugin, $modelName) = explode('.', $modelName);
-				App::uses($modelName, $plugin . '.Model');
-			}
-			else App::uses($modelName, 'Model');
-
-			$assocModel = new $modelName();
-			if (!empty($assocModel->hasMany[$Model->alias]['filters'])) $filter = array_merge($filter, $assocModel->hasMany[$Model->alias]['filters']);
-		}
-
-		if (!$filter) return false;
-
+		$filter = $instructions[Mime_Type::guessName($file)];
+		$results = array();
 		foreach ($filter as $version => $instructions) {
 			$directory = Folder::slashTerm($filterDirectory . $version . $relativeDirectory);
-
 			$Folder = new Folder($directory, $createDirectory, $createDirectoryMode);
 			if (!$Folder->pwd()) {
 				$message  = "GeneratorBehavior::make - Directory `{$directory}` ";
 				$message .= "could not be created or is not writable. ";
 				$message .= "Please check the permissions.";
 				trigger_error($message, E_USER_WARNING);
-				$result = false;
 				continue;
 			}
-
 			try {
 				$result = $Model->makeVersion($file, compact('version', 'directory', 'instructions'));
 			} catch (Exception $E) {
+				$result = false;
 				$message  = "GeneratorBehavior::make - While making version `{$version}` ";
 				$message .= "of file `{$file}` an exception was thrown, the message provided ";
 				$message .= 'was `' . $E->getMessage() . '`. Skipping version.';
 				trigger_error($message, E_USER_WARNING);
-				$result = false;
 			}
-			if (!$result) {
+			if ($result) {
+				$results[] = $result;
+			} else {
 				$message  = "GeneratorBehavior::make - The method responsible for making version ";
 				$message .= "`{$version}` of file `{$file}` returned `false`. Skipping version.";
 				trigger_error($message, E_USER_WARNING);
-				$result = false;
 			}
 		}
-		return $result;
+		return $results;
 	}
-
 /**
  * Generate a version of a file. If this method is reimplemented in the
  * model, than that one is used by `make()` instead of the implementation
@@ -258,33 +244,27 @@ class GeneratorBehavior extends ModelBehavior {
  * @param Model $Model
  * @param string $file Absolute path to the source file
  * @param array $process directory, version, instructions
- * @return boolean `true` if version for the file was successfully stored
+ * @return string|boolean Absolute path to the version file, `false` on error
  */
-	public function makeVersion($Model, $file, $process) {
+	public function makeVersion(Model $Model, $file, $process) {
 		extract($this->settings[$Model->alias]);
-
 		/* Process builtin instructions */
 		if (isset($process['instructions']['clone'])) {
 			$action = $process['instructions']['clone'];
-
 			if (!in_array($action, array('copy', 'link', 'symlink'))) {
 				return false;
 			}
-
-			$destination = $this->_destinationFile($file, $process['directory'], null, $overwrite);
-
+			$destination = $this->_destinationFile(
+				$file, $process['directory'], null, $overwrite
+			);
 			if (!$destination) {
 				return false;
 			}
 			if (!call_user_func($action, $file, $destination)) {
 				return false;
 			}
-			return $action == 'copy' ? chmod($destination, $mode) : true;
+			return $action != 'copy' || chmod($destination, $mode) ? $destination : false;
 		}
-
-		/* Skip hints that are not instructions */
-		unset($process['instructions']['extension']);
-
 		/* Process `Media_Process_*` instructions */
 		$Media = Media_Process::factory(array('source' => $file));
 		foreach ($process['instructions'] as $method => $args) {
@@ -303,10 +283,8 @@ class GeneratorBehavior extends ModelBehavior {
 				$Media = $result;
 			}
 		}
-
 		/* Determine destination file */
 		$extension = null;
-
 		if ($guessExtension) {
 			if (isset($process['instructions']['convert'])) {
 				$extension = Mime_Type::guessExtension($process['instructions']['convert']);
@@ -314,14 +292,14 @@ class GeneratorBehavior extends ModelBehavior {
 				$extension = Mime_Type::guessExtension($file);
 			}
 		}
-		$destination = $this->_destinationFile($file, $process['directory'], $extension, $overwrite);
-
+		$destination = $this->_destinationFile(
+			$file, $process['directory'], $extension, $overwrite
+		);
 		if (!$destination) {
 			return false;
 		}
-		return $Media->store($destination) && chmod($destination, $mode);
+		return $Media->store($destination) && chmod($destination, $mode) ? $destination : false;
 	}
-
 /**
  * Helper method to determine path to destination file and delete
  * it if necessary.
@@ -334,13 +312,12 @@ class GeneratorBehavior extends ModelBehavior {
  */
 	protected function _destinationFile($source, $directory, $extension = null, $overwrite = false) {
 		$destination = $directory;
-
 		if ($extension) {
 			$destination .= pathinfo($source, PATHINFO_FILENAME) . '.' . $extension;
 		} else {
 			$destination .= basename($source);
 		}
-		if (file_exists($destination)) {
+		if (file_exists($destination) || is_link($destination)) {
 			if (!$overwrite) {
 				return false;
 			}
@@ -348,7 +325,6 @@ class GeneratorBehavior extends ModelBehavior {
 		}
 		return $destination;
 	}
-
 /**
  * Returns relative and absolute path to a file
  *
@@ -356,10 +332,9 @@ class GeneratorBehavior extends ModelBehavior {
  * @param string $file
  * @return array
  */
-	protected function _file($Model, $file) {
+	protected function _file(Model $Model, $file) {
 		extract($this->settings[$Model->alias]);
 		$file = str_replace(array('\\', '/'), DS, $file);
-
 		if (!is_file($file)) {
 			$file = ltrim($file, DS);
 			$relativeFile = $file;
@@ -369,41 +344,4 @@ class GeneratorBehavior extends ModelBehavior {
 		}
 		return array($file, $relativeFile);
 	}
-
-	public function setFilter($Model, $filter = null) {
-		$this->settings[$Model->alias]['filter'] = $filter;
-	}
-
-/**
- * Returns the configured filter array
- *
- * @param Model $Model
- * @param string $file
- * @return array
- */
-	public function filter($Model, $file) {
-		$name = Mime_Type::guessName($file);
-
-		$filter = $this->settings[$Model->alias]['filter'];
-
-		$default = false;
-		if (!is_array($filter)) {
-			$filters = Configure::read('Media.filter');
-
-			if (is_string($filter) && isset($filters[$filter])) {
-				$filter = $filters[$filter];
-			} else {
-				$filter = $filters['default'];
-				$default = true;
-			}
-		}
-
-		if (($default !== true) && ($this->settings[$Model->alias]['mergeFilter'] === true)) {
-			$filter = array_merge($filters['default'], (array)$filter);
-		}
-
-		return $filter[$name];
-    }
 }
-
-?>
